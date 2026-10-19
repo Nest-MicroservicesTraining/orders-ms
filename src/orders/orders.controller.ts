@@ -9,7 +9,8 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @MessagePattern('createOrder')
-  create(@Payload() createOrderDto: CreateOrderDto) {
+  async create(@Payload() createOrderDto: CreateOrderDto) {
+    // const products$ = this.productsClient.send('validate_products', ids);
     return this.ordersService.create(createOrderDto);
   }
 

@@ -1,5 +1,8 @@
 PORT = 3000
 
+PRODUCTS_MICROSERVICE_HOST = localhost
+PRODUCTS_MICROSERVICE_PORT = 3001
+
 # This was inserted by `prisma init`:
 # Environment variables declared in this file are NOT automatically loaded by Prisma.
 # Please add `import "dotenv/config";` to your `prisma7.config.ts` file, or use the Prisma CLI with Bun
