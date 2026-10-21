@@ -3,14 +3,14 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaService } from '@/prisma.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { ChangeOrderStatusDto, OrderPaginationDto } from './dto';
-import { PRODUCTS_SERVICE } from '@/config';
+import { NATS_SERVICE } from '@/config';
 import { normalizeRpcError } from '@/common/exceptions/normalize-rcp-error';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class OrdersService {
   constructor(
-    @Inject(PRODUCTS_SERVICE) private readonly productsClient: ClientProxy,
+    @Inject(NATS_SERVICE) private readonly client: ClientProxy,
     private prisma: PrismaService,
   ) {}
 
@@ -154,7 +154,7 @@ export class OrdersService {
     ids: number[],
   ): Promise<{ id: number; price: number; name: string }[]> {
     return await firstValueFrom(
-      this.productsClient.send<{ id: number; price: number; name: string }[]>(
+      this.client.send<{ id: number; price: number; name: string }[]>(
         { cmd: 'validate_products' },
         ids,
       ),
