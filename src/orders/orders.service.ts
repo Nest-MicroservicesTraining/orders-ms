@@ -1,14 +1,21 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaService } from '@/prisma.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { ChangeOrderStatusDto, OrderPaginationDto } from './dto';
+import {
+  ChangeOrderStatusDto,
+  OrderPaginationDto,
+  OrderWithProducts,
+  PaidOrderDto,
+  PaymentSessionResponse,
+} from './dto';
 import { NATS_SERVICE } from '@/config';
 import { normalizeRpcError } from '@/common/exceptions/normalize-rcp-error';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
   constructor(
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
     private prisma: PrismaService,
@@ -159,5 +166,50 @@ export class OrdersService {
         ids,
       ),
     );
+  }
+
+  public async createPaymentSession(order: OrderWithProducts) {
+    try {
+      const paymentSession = await firstValueFrom(
+        this.client.send<PaymentSessionResponse>('create.payment.session', {
+          orderId: order.id,
+          currency: 'usd',
+          items: order.orderItems.map((item) => ({
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+          })),
+        }),
+      );
+
+      console.log('Payment session created:', paymentSession);
+      return paymentSession;
+    } catch (error) {
+      console.error('Error creating payment session:', error);
+      throw new RpcException(normalizeRpcError(error));
+    }
+  }
+
+  async paidOrder(paidOrderDto: PaidOrderDto) {
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: paidOrderDto.orderId },
+      data: {
+        status: 'PAID',
+        paid: true,
+        paidAt: new Date(),
+        stripeChargeId: paidOrderDto.stripePaymentId,
+
+        // La relacion
+        orderReceipt: {
+          create: {
+            receiptUrl: paidOrderDto.receiptUrl,
+          },
+        },
+      },
+    });
+
+    this.logger.log(`Order with ID #${paidOrderDto.orderId} marked as PAID.`);
+
+    return updatedOrder;
   }
 }
