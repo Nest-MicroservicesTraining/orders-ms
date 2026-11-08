@@ -34,6 +34,9 @@ export class OrdersController {
 
   @EventPattern('payment.succeeded')
   handlePaymentSucceeded(@Payload() paidOrderDto: PaidOrderDto) {
+    this.logger.log(
+      `Received payment succeeded event for order ${paidOrderDto.orderId}`,
+    );
     return this.ordersService.paidOrder(paidOrderDto);
   }
 }
